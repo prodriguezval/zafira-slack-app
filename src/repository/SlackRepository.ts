@@ -2,27 +2,14 @@ import {WebClient} from "@slack/web-api";
 import crypto from "crypto";
 import tsscmp from "tsscmp";
 import {UserModel} from "repository/model/UserModel";
-import {Repository} from "typeorm";
-import {Event} from "database/entity/Event";
-import {logger} from "LoggerConfig";
 
 export class SlackRepository {
-  constructor(private client: WebClient, private eventRepository: Repository<Event>) {
+  constructor(private client: WebClient) {
   }
 
   findUser = (id: string): UserModel => {
     return {} as UserModel;
   };
-
-  saveEvent = async (requestEvent: Event) => {
-    const event = await this.eventRepository.findOneBy({id: requestEvent.id})
-    if (event !== null) {
-      logger().info(`Event ${event.id} is already registered, skipping`)
-      return
-    }
-    logger().info(`Saving Event ${requestEvent.id} in the database`)
-    await this.eventRepository.save(requestEvent);
-  }
 
   /**
    * Verifies if the comes from slack, avoiding malicious requests

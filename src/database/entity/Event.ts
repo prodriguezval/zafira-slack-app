@@ -3,7 +3,6 @@ import {Column, Entity, PrimaryColumn} from "typeorm";
 @Entity()
 export class Event {
 
-  @Column()
   @PrimaryColumn()
   id: string;
 
@@ -19,7 +18,7 @@ export class Event {
   @Column()
   rawData: string;
 
-  static createFromRequest = (rawEvent: any): Event => {
+  static fromRequest = (rawEvent: any): Event => {
     return {
       id: rawEvent.event_id,
       type: rawEvent.event.type,
