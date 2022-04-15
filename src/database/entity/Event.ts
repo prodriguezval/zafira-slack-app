@@ -1,13 +1,19 @@
 import {Column, Entity, PrimaryColumn} from "typeorm";
 
+
+export enum EventType {
+  MESSAGE_RECEIVED = "message",
+  HOME_OPENED = "app_home_opened",
+}
+
 @Entity()
 export class Event {
 
   @PrimaryColumn()
   id: string;
 
-  @Column()
-  type: string;
+  @Column({type: "enum", enum: EventType, default: EventType.MESSAGE_RECEIVED})
+  type: EventType;
 
   @Column()
   time: number;
