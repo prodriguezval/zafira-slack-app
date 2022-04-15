@@ -90,7 +90,7 @@ export class GetHomeMessagesUseCase {
                 type: "plain_text",
                 text: `*${message.status}*`,
               },
-              value: message.status,
+              value: `${message.status}*${message.id}`,
             } as PlainTextOption,
             options: [
               {
@@ -98,21 +98,21 @@ export class GetHomeMessagesUseCase {
                   type: "plain_text",
                   text: `*${MessageStatus.NEW}*`,
                 },
-                value: MessageStatus.NEW,
+                value: `${MessageStatus.NEW}*${message.id}`,
               },
               {
                 text: {
                   type: "plain_text",
                   text: `*${MessageStatus.OPEN}*`,
                 },
-                value: MessageStatus.OPEN,
+                value: `${MessageStatus.OPEN}*${message.id}`,
               },
               {
                 text: {
                   type: "plain_text",
                   text: `*${MessageStatus.COMPLETE}*`,
                 },
-                value: MessageStatus.COMPLETE,
+                value: `${MessageStatus.COMPLETE}*${message.id}`,
               },
             ] as PlainTextOption[],
             action_id: "change_message_status",

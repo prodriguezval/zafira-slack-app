@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express, {Request, Response} from "express";
 import {logger} from "LoggerConfig";
-import {WebClient,} from "@slack/web-api";
+import {WebClient} from "@slack/web-api";
 import {SlackRepository} from "repository/SlackRepository";
 import {myDataSource} from "app-data-source";
 import {Event, EventType} from "database/entity/Event";
@@ -10,10 +10,10 @@ import {RegisterMessageUseCase} from "usecase/RegisterMessageUseCase";
 import {Message} from "database/entity/Message";
 import {MessageRepository} from "repository/MessageRepository";
 import {GetHomeMessagesUseCase} from "usecase/GetHomeMessagesUseCase";
+import {UpdateMessageStatus} from "usecase/UpdateMessageStatus";
 
 const app = express();
 const port = process.env.PORT || 3001;
-const apiUrl = "https://slack.com/api";
 const slackClient = new WebClient(process.env.SLACK_TOKEN);
 myDataSource.initialize().catch((err) => {
   logger().error(`Error during Data Source initialization: ${err}`);
@@ -34,7 +34,11 @@ const getHomeMessages = new GetHomeMessagesUseCase(
   messageRepository,
   slackRepository
 );
+
+const updateMessageStatus = new UpdateMessageStatus(messageRepository);
+
 app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
 const slackVerification = (req: Request, res: Response) => {
   logger().info("Slack challenge request body: " + JSON.stringify(req.body));
@@ -85,6 +89,19 @@ app.post("/slack/event", async (req: Request, res: Response) => {
     res.status(403).send("Invalid request!");
   }
   await eventHandler(req, res);
+});
+
+app.post("/slack/interactions", async (req: Request, res: Response) => {
+  const {actions} = JSON.parse(req.body.payload);
+  logger().info(`${req.body.payload}`);
+  const action = actions[0];
+  logger().info(`action received with body: ${JSON.stringify(actions)}`);
+
+  if (action.action_id === "change_message_status") {
+    const [status, id] = action.selected_option.value.split("*");
+    await updateMessageStatus.execute(id, status);
+  }
+  res.status(200).send();
 });
 
 app.listen(port, () => {
