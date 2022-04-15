@@ -3,54 +3,37 @@ import {Event} from "database/entity/Event";
 import {logger} from "LoggerConfig";
 import {MessageRepository} from "repository/MessageRepository";
 import {Message} from "database/entity/Message";
-import {HomeView} from "@slack/types";
+import {HomeView, SectionBlock} from "@slack/types";
+import {ContextBlock, DividerBlock, KnownBlock, MrkdwnElement,} from "@slack/web-api";
 
 export class GetHomeMessagesUseCase {
   constructor(
     private eventRepository: EventRepository,
-    private messageRepository: MessageRepository,
+    private messageRepository: MessageRepository
   ) {
   }
 
   execute = async (eventRequest: any): Promise<HomeView> => {
     const event = Event.fromRequest(eventRequest);
-    try {
-      await this.saveEvent(event);
-    } catch (e: any) {
-      logger().info(
-        `GetHomeMessages event of type ${event.type} register cancelled with message ${e.message}.`
-      );
-    }
-    // await this.messageRepository.getAll()
-    return this.createHome([] as Message[]);
+    await this.saveEvent(event);
+    const messages = await this.messageRepository.getAll();
+    return this.createHome(messages);
   };
 
   private saveEvent = async (event: Event) => {
     const exists = await this.eventRepository.exists(event);
     if (exists) {
-      throw new Error(`event id: ${event.id} already exists.`);
+      return;
     }
 
     await this.eventRepository.save(event);
   };
 
   private createHome = (messages: Message[]): HomeView => {
-    const blocks = [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: ":wave: *Welcome!* \nThis is list of the messages for the workspace",
-        },
-      },
-      {
-        type: "divider",
-      },
-    ];
-    logger().info(`Checking messages ${messages.length}`)
+    logger().info(`Checking messages ${messages.length}`);
     if (messages.length === 0) {
-      logger().info(`Rendering without messages`)
-      const noMessagesBlock = [
+      const blocks = [
+        ...this.renderHeader(),
         {
           type: "section",
           text: {
@@ -59,40 +42,58 @@ export class GetHomeMessagesUseCase {
           },
         },
       ];
-      blocks.concat(noMessagesBlock);
-      logger().info(`Rendering without messages ${blocks}`)
       return {
         type: "home",
         blocks,
-      };
+      } as HomeView;
     }
-    const messagesBlock = messages.map((message) => {
-      return [
+    const messagesBlock = [] as KnownBlock[];
+    messages.forEach((message) => {
+      const messageBlock = [
         {
           type: "section",
           text: {
             type: "mrkdwn",
             text: message.content,
-          },
-        },
+          } as MrkdwnElement,
+        } as SectionBlock,
         {
           type: "context",
           elements: [
             {
               type: "mrkdwn",
               text: message.userId,
-            },
-          ],
-        },
+            } as MrkdwnElement,
+          ] as MrkdwnElement[],
+        } as ContextBlock,
         {
           type: "divider",
-        },
+        } as DividerBlock,
       ];
+      messagesBlock.push(...messageBlock)
     });
-    // blocks.concat(messagesBlock)
+
     return {
       type: "home",
-      blocks,
-    }
+      blocks: [
+        ...this.renderHeader(),
+        ...messagesBlock
+      ],
+    };
+  };
+
+  private renderHeader = () => {
+    return [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: ":wave: *Welcome!* \nThis is list of the messages for the workspace",
+        } as MrkdwnElement,
+      } as SectionBlock,
+      {
+        type: "divider",
+      } as DividerBlock,
+    ] as KnownBlock[];
   };
 }
