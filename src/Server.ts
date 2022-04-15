@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express, {Request, Response} from "express";
 import {logger} from "LoggerConfig";
-import {ViewsPublishArguments, WebClient,} from "@slack/web-api";
+import {WebClient,} from "@slack/web-api";
 import {SlackRepository} from "repository/SlackRepository";
 import {myDataSource} from "app-data-source";
 import {Event, EventType} from "database/entity/Event";
@@ -31,7 +31,8 @@ const registerMessageUseCase = new RegisterMessageUseCase(
 
 const getHomeMessages = new GetHomeMessagesUseCase(
   eventRepository,
-  messageRepository
+  messageRepository,
+  slackRepository
 );
 app.use(express.json());
 
@@ -52,16 +53,7 @@ const eventHandler = async (req: Request, res: Response) => {
   );
   switch (eventType) {
     case EventType.HOME_OPENED: {
-      const {user} = req.body.event;
-      const view = await getHomeMessages.execute(req.body);
-      const args = {
-        user_id: user,
-        view,
-      } as ViewsPublishArguments;
-      logger().info(`args request: ${user}`);
-      const result = await slackClient.views.publish(args);
-
-      logger().info(`result of publishing home ${result.ok}`);
+      await getHomeMessages.execute(req.body);
       res.status(200);
       break;
     }

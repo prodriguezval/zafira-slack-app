@@ -1,14 +1,35 @@
-import {WebClient} from "@slack/web-api";
+import {ViewsPublishArguments, WebClient} from "@slack/web-api";
 import crypto from "crypto";
 import tsscmp from "tsscmp";
 import {UserModel} from "repository/model/UserModel";
+import {HomeView} from "@slack/types";
+import {logger} from "LoggerConfig";
 
 export class SlackRepository {
   constructor(private client: WebClient) {
   }
 
-  findUser = (id: string): UserModel => {
-    return {} as UserModel;
+  refreshAppHome = async (userId: string, view: HomeView) => {
+    const args = {
+      user_id: userId,
+      view,
+    } as ViewsPublishArguments;
+    const result = await this.client.views.publish(args);
+    logger().info(`result of publishing home ${result.ok}`);
+  };
+
+  findUser = async (id: string): Promise<UserModel> => {
+    const result = await this.client.users.info({user: id});
+    const {user} = result;
+    if (!result.ok || !user) {
+      throw new Error(`User ${id} not found`)
+    }
+
+    return {
+      email: user.profile?.email,
+      name: user.name,
+      imageUrl: user.profile?.image_32
+    } as UserModel;
   };
 
   /**

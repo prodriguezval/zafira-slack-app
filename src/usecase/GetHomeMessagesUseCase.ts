@@ -2,22 +2,33 @@ import {EventRepository} from "repository/EventRepository";
 import {Event} from "database/entity/Event";
 import {logger} from "LoggerConfig";
 import {MessageRepository} from "repository/MessageRepository";
-import {Message} from "database/entity/Message";
+import {Message, MessageStatus} from "database/entity/Message";
 import {HomeView, SectionBlock} from "@slack/types";
-import {ContextBlock, DividerBlock, KnownBlock, MrkdwnElement,} from "@slack/web-api";
+import {
+  ContextBlock,
+  DividerBlock,
+  ImageBlock,
+  KnownBlock,
+  MrkdwnElement,
+  PlainTextOption,
+  Select,
+} from "@slack/web-api";
+import {SlackRepository} from "repository/SlackRepository";
 
 export class GetHomeMessagesUseCase {
   constructor(
     private eventRepository: EventRepository,
-    private messageRepository: MessageRepository
+    private messageRepository: MessageRepository,
+    private slackRepository: SlackRepository
   ) {
   }
 
-  execute = async (eventRequest: any): Promise<HomeView> => {
+  execute = async (eventRequest: any) => {
     const event = Event.fromRequest(eventRequest);
     await this.saveEvent(event);
     const messages = await this.messageRepository.getAll();
-    return this.createHome(messages);
+    const homeView = await this.createHome(messages);
+    await this.slackRepository.refreshAppHome(event.user, homeView);
   };
 
   private saveEvent = async (event: Event) => {
@@ -29,7 +40,7 @@ export class GetHomeMessagesUseCase {
     await this.eventRepository.save(event);
   };
 
-  private createHome = (messages: Message[]): HomeView => {
+  private createHome = async (messages: Message[]): Promise<HomeView> => {
     logger().info(`Checking messages ${messages.length}`);
     if (messages.length === 0) {
       const blocks = [
@@ -48,37 +59,75 @@ export class GetHomeMessagesUseCase {
       } as HomeView;
     }
     const messagesBlock = [] as KnownBlock[];
-    messages.forEach((message) => {
+    for (const message of messages) {
+      const user = await this.slackRepository.findUser(message.userId);
+      logger().info(`User info: ${JSON.stringify(user)}`);
       const messageBlock = [
+        {
+          type: "context",
+          elements: [
+            {
+              type: "image",
+              image_url: user.imageUrl,
+              alt_text: `User ${user.name} picture`,
+            } as ImageBlock,
+            {
+              type: "mrkdwn",
+              text: user.name,
+            } as MrkdwnElement,
+          ] as MrkdwnElement[],
+        } as ContextBlock,
         {
           type: "section",
           text: {
             type: "mrkdwn",
             text: message.content,
           } as MrkdwnElement,
+          accessory: {
+            type: "static_select",
+            initial_option: {
+              text: {
+                type: "plain_text",
+                text: `*${message.status}*`,
+              },
+              value: message.status,
+            } as PlainTextOption,
+            options: [
+              {
+                text: {
+                  type: "plain_text",
+                  text: `*${MessageStatus.NEW}*`,
+                },
+                value: MessageStatus.NEW,
+              },
+              {
+                text: {
+                  type: "plain_text",
+                  text: `*${MessageStatus.OPEN}*`,
+                },
+                value: MessageStatus.OPEN,
+              },
+              {
+                text: {
+                  type: "plain_text",
+                  text: `*${MessageStatus.COMPLETE}*`,
+                },
+                value: MessageStatus.COMPLETE,
+              },
+            ] as PlainTextOption[],
+            action_id: "change_message_status",
+          } as Select,
         } as SectionBlock,
-        {
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: message.userId,
-            } as MrkdwnElement,
-          ] as MrkdwnElement[],
-        } as ContextBlock,
         {
           type: "divider",
         } as DividerBlock,
       ];
-      messagesBlock.push(...messageBlock)
-    });
+      messagesBlock.push(...messageBlock);
+    }
 
     return {
       type: "home",
-      blocks: [
-        ...this.renderHeader(),
-        ...messagesBlock
-      ],
+      blocks: [...this.renderHeader(), ...messagesBlock],
     };
   };
 
