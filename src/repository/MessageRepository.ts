@@ -8,7 +8,10 @@ export class MessageRepository {
 
   getAll = async (): Promise<Message[]> => {
     logger().info("Getting the complete message list");
-    return await this.messageDaoRepository.find();
+    return await this.messageDaoRepository.find({
+        where: [{status: MessageStatus.NEW}, {status: MessageStatus.OPEN}]
+      }
+    );
   };
   save = async (message: Message) => {
     logger().info(

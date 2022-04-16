@@ -57,7 +57,8 @@ const eventHandler = async (req: Request, res: Response) => {
   );
   switch (eventType) {
     case EventType.HOME_OPENED: {
-      await getHomeMessages.execute(req.body);
+      const {user} = req.body.event
+      await getHomeMessages.execute(user);
       res.status(200);
       break;
     }
@@ -92,14 +93,14 @@ app.post("/slack/event", async (req: Request, res: Response) => {
 });
 
 app.post("/slack/interactions", async (req: Request, res: Response) => {
-  const {actions} = JSON.parse(req.body.payload);
-  logger().info(`${req.body.payload}`);
+  const {user, actions} = JSON.parse(req.body.payload);
   const action = actions[0];
   logger().info(`action received with body: ${JSON.stringify(actions)}`);
 
   if (action.action_id === "change_message_status") {
     const [status, id] = action.selected_option.value.split("*");
     await updateMessageStatus.execute(id, status);
+    getHomeMessages.execute(user.id)
   }
   res.status(200).send();
 });

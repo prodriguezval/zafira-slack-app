@@ -1,5 +1,4 @@
 import {EventRepository} from "repository/EventRepository";
-import {Event} from "database/entity/Event";
 import {logger} from "LoggerConfig";
 import {MessageRepository} from "repository/MessageRepository";
 import {Message, MessageStatus} from "database/entity/Message";
@@ -23,21 +22,10 @@ export class GetHomeMessagesUseCase {
   ) {
   }
 
-  execute = async (eventRequest: any) => {
-    const event = Event.fromRequest(eventRequest);
-    await this.saveEvent(event);
+  execute = async (userId: string) => {
     const messages = await this.messageRepository.getAll();
     const homeView = await this.createHome(messages);
-    await this.slackRepository.refreshAppHome(event.user, homeView);
-  };
-
-  private saveEvent = async (event: Event) => {
-    const exists = await this.eventRepository.exists(event);
-    if (exists) {
-      return;
-    }
-
-    await this.eventRepository.save(event);
+    await this.slackRepository.refreshAppHome(userId, homeView);
   };
 
   private createHome = async (messages: Message[]): Promise<HomeView> => {
