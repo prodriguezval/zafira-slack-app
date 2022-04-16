@@ -73,21 +73,11 @@ export class GetHomeMessagesUseCase {
           } as MrkdwnElement,
           accessory: {
             type: "static_select",
-            initial_option: {
-              text: {
-                type: "plain_text",
-                text: `*${message.status}*`,
-              },
-              value: `${message.status}*${message.id}`,
-            } as PlainTextOption,
+            placeholder: {
+              type: "plain_text",
+              text: "Select an message status",
+            },
             options: [
-              {
-                text: {
-                  type: "plain_text",
-                  text: `*${MessageStatus.NEW}*`,
-                },
-                value: `${MessageStatus.NEW}*${message.id}`,
-              },
               {
                 text: {
                   type: "plain_text",
