@@ -13,6 +13,7 @@ import {
   Select,
 } from "@slack/web-api";
 import {SlackRepository} from "repository/SlackRepository";
+import {UserModel} from "repository/model/UserModel";
 
 export class GetHomeMessagesUseCase {
   constructor(
@@ -49,56 +50,7 @@ export class GetHomeMessagesUseCase {
     const messagesBlock = [] as KnownBlock[];
     for (const message of messages) {
       const user = await this.slackRepository.findUser(message.userId);
-      const messageBlock = [
-        {
-          type: "context",
-          elements: [
-            {
-              type: "image",
-              image_url: user.imageUrl,
-              alt_text: `User ${user.name} picture`,
-            } as ImageBlock,
-            {
-              type: "mrkdwn",
-              text: user.name,
-            } as MrkdwnElement,
-          ] as MrkdwnElement[],
-        } as ContextBlock,
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: message.content,
-          } as MrkdwnElement,
-          accessory: {
-            type: "static_select",
-            placeholder: {
-              type: "plain_text",
-              text: "Select an message status",
-            },
-            options: [
-              {
-                text: {
-                  type: "plain_text",
-                  text: `*${MessageStatus.OPEN}*`,
-                },
-                value: `${MessageStatus.OPEN}*${message.id}`,
-              },
-              {
-                text: {
-                  type: "plain_text",
-                  text: `*${MessageStatus.COMPLETE}*`,
-                },
-                value: `${MessageStatus.COMPLETE}*${message.id}`,
-              },
-            ] as PlainTextOption[],
-            action_id: "change_message_status",
-          } as Select,
-        } as SectionBlock,
-        {
-          type: "divider",
-        } as DividerBlock,
-      ];
+      const messageBlock = this.renderMessage(user, message)
       messagesBlock.push(...messageBlock);
     }
 
@@ -122,4 +74,66 @@ export class GetHomeMessagesUseCase {
       } as DividerBlock,
     ] as KnownBlock[];
   };
+
+  private renderMessage = (user: UserModel, message: Message): KnownBlock[] => {
+    return [
+      {
+        type: "context",
+        elements: [
+          {
+            type: "image",
+            image_url: user.imageUrl,
+            alt_text: `User ${user.name} picture`,
+          } as ImageBlock,
+          {
+            type: "mrkdwn",
+            text: `Posted by: <@${message.userId}>`,
+          } as MrkdwnElement,
+        ] as MrkdwnElement[],
+      } as ContextBlock,
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: message.content,
+        } as MrkdwnElement,
+        accessory: {
+          type: "static_select",
+          placeholder: {
+            type: "plain_text",
+            text: "Select an message status",
+          },
+          options: [
+            {
+              text: {
+                type: "plain_text",
+                text: `*${MessageStatus.OPEN}*`,
+              },
+              value: `${MessageStatus.OPEN}*${message.id}`,
+            },
+            {
+              text: {
+                type: "plain_text",
+                text: `*${MessageStatus.COMPLETE}*`,
+              },
+              value: `${MessageStatus.COMPLETE}*${message.id}`,
+            },
+          ] as PlainTextOption[],
+          action_id: "change_message_status",
+        } as Select,
+      } as SectionBlock,
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Channel: <#${message.channelId}>`,
+          } as MrkdwnElement,
+        ] as MrkdwnElement[],
+      } as ContextBlock,
+      {
+        type: "divider",
+      } as DividerBlock,
+    ] as KnownBlock[];
+  }
 }
