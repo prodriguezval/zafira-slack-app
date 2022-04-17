@@ -29,6 +29,11 @@ export class SlackRepository {
     } as UserModel;
   };
 
+  isBotChannelMember = async (channelId: string): Promise<boolean> => {
+    const botId = process.env.BOT_ID || "";
+    const {members} = await this.client.conversations.members({channel: channelId});
+    return members?.includes(botId) as boolean
+  }
   isUserExternal = async (id: string): Promise<boolean> => {
     const user = await this.getUser(id);
     return !user.is_admin;

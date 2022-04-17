@@ -26,6 +26,12 @@ export class RegisterMessageUseCase {
   };
 
   private validate = async (event: Event) => {
+    const botIsInChannel = await this.slackRepository.isBotChannelMember(event.channel);
+    if (!botIsInChannel) {
+      throw Error(
+        `Event ${event.id} produced in a channel  ${event.channel} without the bot`
+      );
+    }
     const isExternal = await this.slackRepository.isUserExternal(event.user);
     if (!isExternal) {
       throw Error(

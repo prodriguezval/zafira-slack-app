@@ -22,6 +22,9 @@ export class Event {
   user: string;
 
   @Column()
+  channel: string;
+
+  @Column()
   rawData: string;
 
   static fromRequest = (rawEvent: any): Event => {
@@ -30,6 +33,7 @@ export class Event {
       type: rawEvent.event.type,
       time: rawEvent.event_time,
       user: rawEvent.event.user,
+      channel: rawEvent.event.channel,
       rawData: JSON.stringify(rawEvent.event)
     } as Event
   }
