@@ -25,11 +25,33 @@ export class GetHomeMessagesUseCase {
 
   execute = async (userId: string) => {
     const messages = await this.messageRepository.getAll();
-    const homeView = await this.createHome(messages);
+    const isExternalUser = await this.slackRepository.isUserExternal(userId)
+    const homeView = await this.createHome(messages, isExternalUser);
     await this.slackRepository.refreshAppHome(userId, homeView);
   };
 
-  private createHome = async (messages: Message[]): Promise<HomeView> => {
+  private createHome = async (messages: Message[], isExternalUser: boolean): Promise<HomeView> => {
+    if (isExternalUser) {
+      logger().info(`Home for external user`);
+      const blocks = [
+        ...this.renderHeader(),
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: ":building_construction: *We are building this section*",
+          },
+        },
+      ];
+      return {
+        type: "home",
+        blocks,
+      } as HomeView;
+    }
+    return await this.createHomeForInternalUser(messages)
+  };
+
+  private createHomeForInternalUser = async (messages: Message[]) => {
     logger().info(`Checking messages ${messages.length}`);
     if (messages.length === 0) {
       const blocks = [
@@ -57,8 +79,8 @@ export class GetHomeMessagesUseCase {
     return {
       type: "home",
       blocks: [...this.renderHeader(), ...messagesBlock],
-    };
-  };
+    } as HomeView;
+  }
 
   private renderHeader = () => {
     return [
