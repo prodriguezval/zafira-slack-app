@@ -49,7 +49,6 @@ export class GetHomeMessagesUseCase {
     const messagesBlock = [] as KnownBlock[];
     for (const message of messages) {
       const user = await this.slackRepository.findUser(message.userId);
-      logger().info(`User info: ${JSON.stringify(user)}`);
       const messageBlock = [
         {
           type: "context",

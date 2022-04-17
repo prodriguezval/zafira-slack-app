@@ -4,6 +4,7 @@ import tsscmp from "tsscmp";
 import {UserModel} from "repository/model/UserModel";
 import {HomeView} from "@slack/types";
 import {logger} from "LoggerConfig";
+import {User} from "@slack/web-api/dist/response/UsersInfoResponse";
 
 export class SlackRepository {
   constructor(private client: WebClient) {
@@ -19,11 +20,7 @@ export class SlackRepository {
   };
 
   findUser = async (id: string): Promise<UserModel> => {
-    const result = await this.client.users.info({user: id});
-    const {user} = result;
-    if (!result.ok || !user) {
-      throw new Error(`User ${id} not found`)
-    }
+    const user = await this.getUser(id);
 
     return {
       email: user.profile?.email,
@@ -31,6 +28,19 @@ export class SlackRepository {
       imageUrl: user.profile?.image_32
     } as UserModel;
   };
+
+  isUserExternal = async (id: string): Promise<boolean> => {
+    const user = await this.getUser(id);
+    return !user.is_admin;
+  }
+  private getUser = async (id: string): Promise<User> => {
+    const result = await this.client.users.info({user: id});
+    const {user} = result;
+    if (user === undefined) {
+      throw Error(`User ${id} not found`);
+    }
+    return user;
+  }
 
   /**
    * Verifies if the comes from slack, avoiding malicious requests
